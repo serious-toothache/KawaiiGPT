@@ -1,4 +1,5 @@
 ## KawaiiGPT
+<img width="690" height="596" alt="image" src="https://github.com/user-attachments/assets/87becb7a-2c34-409f-a523-a18feaba5339" />
 
 <div align="center">
     <img src="kawaii.svg" width="50%" height="300%" />

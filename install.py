@@ -1,19 +1,21 @@
 import os
 
+# -----------------------------
+# Detect if device is Android/Termux
+# -----------------------------
 def check():
     try:
         is_android = os.path.exists('/system/bin/app_process') or os.path.exists('/system/bin/app_process32')
-        if is_android:
-            return 0
-        else:
-            return 1
+        return 0 if is_android else 1
     except Exception as e:
         return f"Error: {e}"
 
 device = check()
-
 mode = 1
 
+# -----------------------------
+# Termux package list
+# -----------------------------
 package_termux = [
     'pkg update -y && pkg upgrade -y',
     'pkg install -y git',
@@ -21,15 +23,19 @@ package_termux = [
     'pkg install -y python3'
 ]
 
+# -----------------------------
+# Arch Linux package list
+# -----------------------------
 package_linux = [
-    'apt-get update -y && apt-get upgrade -y',
-    'apt-get install -y python3 python3-pip',
-    'apt-get install -y git',
-    'apt-get install -y python'
+    'sudo pacman -Syu --noconfirm',
+    'sudo pacman -S --noconfirm python python-pip',
+    'sudo pacman -S --noconfirm git'
 ]
 
+# Not supported on Android
 na_support = ["soundfile"]
 
+# Python modules to install
 modules = [
     'prompt_toolkit',
     'requests',
@@ -46,12 +52,15 @@ modules = [
     'pexpect'
 ]
 
+# -----------------------------
+# Detect Termux
+# -----------------------------
 def detect_os():
-    if os.path.exists("/data/data/com.termux/files/usr/bin/bash"):
-        return 1
-    else:
-        return 0
+    return 1 if os.path.exists("/data/data/com.termux/files/usr/bin/bash") else 0
 
+# -----------------------------
+# Update packages depending on OS
+# -----------------------------
 def up_package():
     os_type = detect_os()
     if os_type == 1:
@@ -60,70 +69,65 @@ def up_package():
             print(f"Executing: {command}")
             os.system(command)
     else:
-        print("Detected Linux environment")
+        print("Detected Linux (Arch) environment")
         for command in package_linux:
             print(f"Executing: {command}")
             os.system(command)
 
-def pip_install(module_name, break_sys=False):
+# -----------------------------
+# Install python modules
+# -----------------------------
+def pip_install(module_name):
     global mode
-    if mode == 1:
-        cmd = f"python3 -m pip install {module_name}"
-    else:
-        cmd = f"python -m pip install {module_name}"
-    if break_sys:
-        cmd += " --break-system-packages"
-
-    print(f"Installing {module_name} {'(force)' if break_sys else ''} ...")
-    result = os.system(cmd)
-
-    if result != 0 and not break_sys:
-        print(f"[!] Retrying {module_name} with --break-system-packages...")
-        return pip_install(module_name, break_sys=True)
-    return result
+    cmd = "python3 -m pip install {}".format(module_name) if mode == 1 else "python -m pip install {}".format(module_name)
+    print(f"Installing {module_name} ...")
+    return os.system(cmd)
 
 def install_modules():
-    print('='*4+'Installing Python modules'+'='*4)
-    failed_modules = []
+    print('='*4 + 'Installing Python modules' + '='*4)
+    failed = []
 
     for mod in modules:
         try:
             if mod in na_support and device == 0:
-                print(f"[!] Skipped module: {mod} (Not supported in this device)")
+                print(f"[!] Skipped: {mod} (Not supported on Android)")
                 continue
 
-            result = pip_install(mod)
-            if result != 0:
-                failed_modules.append(mod)
+            if pip_install(mod) != 0:
+                failed.append(mod)
 
         except Exception as e:
-            print(f'[!] Module {mod} cannot be installed: {e}')
-            failed_modules.append(mod)
+            print(f"[!] Failed {mod}: {e}")
+            failed.append(mod)
 
-    if failed_modules:
-        print(f"[!] Failed to install: {', '.join(failed_modules)}")
-        print("[!] You may need to install these manually")
+    if failed:
+        print("[!] Failed to install: " + ", ".join(failed))
+        print("[!] Install manually if needed.")
 
+# -----------------------------
+# Main
+# -----------------------------
 def main():
     global mode
-    print('='*4+'KawaiiGPT Installer'+'='*4)
+    print('='*4 + 'KawaiiGPT Installer' + '='*4)
 
-    print('='*4+'Updating system packages'+'='*4)
+    print('='*4 + 'Updating System Packages' + '='*4)
     if input('[~] Update system packages? Y/N: ').lower() == 'y':
         up_package()
     else:
-        print("[+] Skipping package update..")
+        print("[+] Skipping package update...")
 
-    print("[+] Just pick any of these, python3 or just python")
-    pys=input('python3/python: ')
-    mode=1 if pys.lower() == 'python3' else 0
+    print("[+] Choose Python version (python3 recommended)")
+    pys = input('python3/python: ').lower()
+    mode = 1 if pys == 'python3' else 0
+
     install_modules()
 
-    print('='*4+'Starting KawaiiGPT'+'='*4)
+    print('='*4 + 'Starting KawaiiGPT' + '='*4)
     if os.path.exists('kawai.py'):
         os.system('python3 kawai.py') if mode == 1 else os.system('python kawai.py')
     else:
-        print("[!] kawai.py not found. Please download it first.")
+        print("[!] kawai.py not found. Download it first.")
 
 if __name__ == "__main__":
     main()
